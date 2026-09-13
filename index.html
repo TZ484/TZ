@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HK 18 Explorer - Student Travel & Photography Quest</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hkred: '#E60012',
+                        hkblue: '#0066CC',
+                        hkgold: '#F5A623',
+                        hkjade: '#00A86B',
+                        hkdark: '#1E293B',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans HK', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Leaflet CSS & JS for Interactive Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+HK:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        #leaflet-map {
+            z-index: 10;
+        }
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            padding: 4px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .badge-glow {
+            box-shadow: 0 0 15px rgba(245, 166, 35, 0.4);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col antialiased selection:bg-hkred selection:text-white">
+
+    <!-- Navigation Bar -->
+    <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-hkred via-rose-500 to-hkgold flex items-center justify-center text-white shadow-lg shadow-rose-200 transform hover:rotate-6 transition-transform">
+                    <i class="fa-solid font-bold fa-camera-retro text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
+                        HK 18 Explorer <span class="bg-hkred/10 text-hkred text-xs px-2.5 py-0.5 rounded-full font-bold">學界漫遊</span>
+                    </h1>
+                    <p class="text-xs text-slate-500 font-medium">Hong Kong 18 Districts Travel & Photography Quest</p>
+                </div>
+            </div>
+
+            <!-- Main Navigation Links -->
+            <nav class="hidden md:flex items-center space-x-1 lg:space-x-2 bg-slate-100 p-1.5 rounded-xl text-sm font-semibold">
+                <button onclick="scrollToSection('map-section')" class="px-4 py-2 rounded-lg text-slate-700 hover:text-hkred hover:bg-white transition-all duration-200">
+                    <i class="fa-solid fa-map-location-dot mr-1.5 text-hkblue"></i> <span data-i18n="navMap">18區地圖</span>
+                </button>
+                <button onclick="scrollToSection('districts-grid')" class="px-4 py-2 rounded-lg text-slate-700 hover:text-hkred hover:bg-white transition-all duration-200">
+                    <i class="fa-solid fa-landmark mr-1.5 text-hkgold"></i> <span data-i18n="navLandmarks">古蹟景點</span>
+                </button>
+                <button onclick="scrollToSection('assignments-section')" class="px-4 py-2 rounded-lg text-slate-700 hover:text-hkred hover:bg-white transition-all duration-200">
+                    <i class="fa-solid fa-tasks mr-1.5 text-hkjade"></i> <span data-i18n="navQuests">攝影任務</span>
+                </button>
+                <button onclick="scrollToSection('gallery-section')" class="px-4 py-2 rounded-lg text-slate-700 hover:text-hkred hover:bg-white transition-all duration-200">
+                    <i class="fa-solid fa-images mr-1.5 text-purple-600"></i> <span data-i18n="navGallery">學生作品集</span>
+                </button>
+            </nav>
+
+            <!-- Student Profile Badge & Action Button -->
+            <div class="flex items-center space-x-3">
+                <button onclick="toggleLanguage()" id="lang-toggle-btn" class="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-3 py-2 rounded-xl text-sm font-bold transition-all flex items-center space-x-1.5 shadow-sm">
+                    <i class="fa-solid fa-globe text-hkblue"></i>
+                    <span id="lang-toggle-label">English</span>
+                </button>
+
+                <button onclick="openPassportModal()" class="flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-hkgold text-white px-3.5 py-2 rounded-xl font-semibold shadow-md shadow-amber-200 hover:shadow-lg hover:scale-105 transition-all text-sm">
+                    <i class="fa-solid fa-passport text-lg"></i>
+                    <span class="hidden sm:inline" data-i18n="navPassport">我的護照</span>
+                    <span id="stamps-count-badge" class="bg-white/30 text-white text-xs px-2 py-0.5 rounded-full">0/18</span>
+                </button>
+
+                <button onclick="openUploadModal()" class="bg-hkred hover:bg-red-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md shadow-rose-200 flex items-center space-x-2 hover:scale-105 transition-all">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span class="hidden sm:inline" data-i18n="navSubmit">提交作品</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Banner Section -->
+    <section class="relative overflow-hidden bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 text-white py-16 lg:py-24">
+        <!-- Background decorative vectors -->
+        <div class="absolute inset-0 opacity-10 pointer-events-none">
+            <div class="absolute -top-20 -left-20 w-96 h-96 bg-hkred rounded-full filter blur-3xl"></div>
+            <div class="absolute top-1/2 right-0 w-96 h-96 bg-hkblue rounded-full filter blur-3xl"></div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                <!-- Left text content -->
+                <div class="lg:col-span-7 space-y-6 text-center lg:text-left">
+                    <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20 text-xs sm:text-sm font-medium text-amber-300">
+                        <i class="fa-solid fa-graduation-cap"></i> <span data-i18n="heroBadge">全港中小學生社區歷奇與攝影學習平台</span>
+                    </div>
+
+                    <h2 class="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight" data-i18n="heroTitle">
+                        用鏡頭探索 <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-rose-400 to-sky-400">香港十八區</span> 建築與歷史文化
+                    </h2>
+
+                    <p class="text-slate-300 text-base sm:text-lg max-w-2xl leading-relaxed" data-i18n="heroDesc">
+                        走訪歷史古蹟、百年古廟、海岸自然與現代摩天大樓。完成社區攝影挑戰，集齊18區數碼歷奇印章，展示你的創意視角！
+                    </p>
+
+                    <!-- Quick stats / search bar -->
+                    <div class="pt-4 flex flex-wrap gap-4 justify-center lg:justify-start">
+                        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-center space-x-4 min-w-[150px]">
+                            <div class="w-12 h-12 rounded-xl bg-hkred/20 text-hkred flex items-center justify-center font-bold text-xl">
+                                18
+                            </div>
+                            <div>
+                                <div class="text-xl font-bold" data-i18n="statDistricts">行政分區</div>
+                                <div class="text-xs text-slate-400" data-i18n="statDistrictsSub">涵蓋全港18區</div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-center space-x-4 min-w-[150px]">
+                            <div class="w-12 h-12 rounded-xl bg-hkgold/20 text-hkgold flex items-center justify-center font-bold text-xl">
+                                54+
+                            </div>
+                            <div>
+                                <div class="text-xl font-bold" data-i18n="statLandmarks">古蹟景點</div>
+                                <div class="text-xs text-slate-400" data-i18n="statLandmarksSub">特色建築與歷史導賞</div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-center space-x-4 min-w-[150px]">
+                            <div class="w-12 h-12 rounded-xl bg-hkjade/20 text-hkjade flex items-center justify-center font-bold text-xl">
+                                18
+                            </div>
+                            <div>
+                                <div class="text-xl font-bold" data-i18n="statQuests">攝影任務</div>
+                                <div class="text-xs text-slate-400" data-i18n="statQuestsSub">提升觀察力與構圖技巧</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right visual element / Feature Card -->
+                <div class="lg:col-span-5 flex justify-center">
+                    <div class="relative w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-3xl shadow-2xl">
+                        <div class="absolute -top-3 -right-3 bg-hkred text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                            <i class="fa-solid fa-fire text-amber-300 mr-1"></i> <span data-i18n="featuredBadge">精選任務</span>
+                        </div>
+                        <img src="https://images.unsplash.com/photo-1506970845246-18f21d533b20?auto=format&fit=crop&w=800&q=80" alt="Clock Tower TST" class="w-full h-52 object-cover rounded-2xl mb-4 shadow-md">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 px-2.5 py-1 rounded-md" data-i18n="featuredDistrictTag">油尖旺區 Yau Tsim Mong</span>
+                            <span class="text-xs text-slate-300"><i class="fa-solid fa-clock mr-1"></i> <span data-i18n="featuredGrade">小四至中六級別</span></span>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-1" data-i18n="featuredTitle">尖沙咀前九廣鐵路鐘樓</h3>
+                        <p class="text-xs text-slate-300 mb-4 line-clamp-2" data-i18n="featuredDesc">建於1915年，為舊九廣鐵路總站的標誌建築。捕捉紅磚愛德華式古典建築與維港現代摩天大樓的強烈對比！</p>
+                        
+                        <button onclick="selectDistrict('yau-tsim-mong')" class="w-full bg-white text-slate-900 font-bold py-2.5 px-4 rounded-xl hover:bg-amber-400 transition-colors text-sm flex items-center justify-center gap-2">
+                            <span data-i18n="featuredExploreBtn">查看景點導賞與攝影提示</span>
+                            <i class="fa-solid fa-arrow-right text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Map Section -->
+    <section id="map-section" class="py-12 bg-white border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-8">
+                <span class="text-hkred font-bold text-sm tracking-widest uppercase bg-rose-50 px-3 py-1 rounded-full border border-rose-100" data-i18n="mapBadge">互動香港地圖</span>
+                <h2 class="text-3xl font-extrabold text-slate-900 mt-2" data-i18n="mapTitle">探索香港十八區歷史景點</h2>
+                <p class="text-slate-600 mt-2 text-sm sm:text-base" data-i18n="mapDesc">點擊地圖上的分區標記，即時查看各區著名地標、建築特色及專屬攝影挑戰。</p>
+            </div>
+
+            <!-- Region Filter Tabs -->
+            <div class="flex flex-wrap items-center justify-center gap-2 mb-6" id="region-filters">
+                <button onclick="filterMapRegion('all')" class="region-btn active px-4 py-2 rounded-xl text-sm font-bold bg-slate-900 text-white transition-all" data-i18n="btnFilterAll">全港 18 區</button>
+                <button onclick="filterMapRegion('hk-island')" class="region-btn px-4 py-2 rounded-xl text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all" data-i18n="btnFilterHK">港島區 (4區)</button>
+                <button onclick="filterMapRegion('kowloon')" class="region-btn px-4 py-2 rounded-xl text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all" data-i18n="btnFilterKLN">九龍區 (5區)</button>
+                <button onclick="filterMapRegion('new-territories')" class="region-btn px-4 py-2 rounded-xl text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all" data-i18n="btnFilterNT">新界區 (8區)</button>
+                <button onclick="filterMapRegion('islands')" class="region-btn px-4 py-2 rounded-xl text-sm font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all" data-i18n="btnFilterISL">離島區 (1區)</button>
+            </div>
+
+            <!-- Leaflet Map Container -->
+            <div class="relative rounded-3xl overflow-hidden shadow-xl border border-slate-200">
+                <div id="leaflet-map" class="w-full h-[500px]"></div>
+                <!-- Floating Info Tip -->
+                <div class="absolute bottom-4 left-4 right-4 sm:left-auto sm:right-4 z-20 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-600 flex items-center justify-between sm:justify-start gap-3 shadow-lg">
+                    <span class="flex items-center gap-1.5 font-semibold text-slate-900"><i class="fa-solid fa-circle-info text-hkblue"></i> <span data-i18n="mapTipTitle">學生探索小貼士：</span></span>
+                    <span data-i18n="mapTipDesc">放大地圖並點擊相機圖示即可開啟景點指南！</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- District Cards Directory Grid -->
+    <section id="districts-grid" class="py-16 bg-slate-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+                <div>
+                    <span class="text-hkgold font-bold text-sm tracking-widest uppercase bg-amber-50 px-3 py-1 rounded-full border border-amber-100" data-i18n="directoryBadge">地標導賞目錄</span>
+                    <h2 class="text-3xl font-extrabold text-slate-900 mt-2" data-i18n="directoryTitle">十八區歷史建築與景點指南</h2>
+                    <p class="text-slate-600 text-sm sm:text-base mt-1" data-i18n="directoryDesc">專為中小學專題研習設計，深入了解建築風格、歷史由來與文化價值。</p>
+                </div>
+                <!-- Search Box -->
+                <div class="relative w-full md:w-80">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="district-search" onkeyup="searchDistricts()" placeholder="搜尋分區、地標或歷史關鍵字..." class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-hkred focus:border-transparent text-sm bg-white shadow-sm">
+                </div>
+            </div>
+
+            <!-- District Grid Container (Populated dynamically) -->
+            <div id="grid-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Cards injected by JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Student Photography Assignments Section -->
+    <section id="assignments-section" class="py-16 bg-white border-t border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-12">
+                <span class="text-hkjade font-bold text-sm tracking-widest uppercase bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100" data-i18n="questsBadge">從攝影中學習</span>
+                <h2 class="text-3xl font-extrabold text-slate-900 mt-2" data-i18n="questsTitle">全港學生社區攝影挑戰任務</h2>
+                <p class="text-slate-600 mt-2 text-sm sm:text-base" data-i18n="questsDesc">學習對稱、對比與空間構圖，捕捉香港獨特的都市與自然共融景致。</p>
+            </div>
+
+            <!-- Quest Technique Badges / Filters -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <div class="bg-gradient-to-br from-rose-50 to-orange-50 p-6 rounded-2xl border border-rose-100 flex items-start space-x-4">
+                    <div class="w-12 h-12 rounded-xl bg-hkred text-white flex items-center justify-center shrink-0 text-xl font-bold shadow-md shadow-rose-200">
+                        <i class="fa-solid fa-monument"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-lg" data-i18n="tech1Title">建築幾何與對稱感</h3>
+                        <p class="text-xs text-slate-600 mt-1" data-i18n="tech1Desc">專注於傳統廟宇飛簷、石柱拱廊與現代摩天大樓的垂直與幾何對稱線條。</p>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-br from-sky-50 to-indigo-50 p-6 rounded-2xl border border-sky-100 flex items-start space-x-4">
+                    <div class="w-12 h-12 rounded-xl bg-hkblue text-white flex items-center justify-center shrink-0 text-xl font-bold shadow-md shadow-sky-200">
+                        <i class="fa-solid fa-circle-half-stroke"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-lg" data-i18n="tech2Title">都市與自然對比</h3>
+                        <p class="text-xs text-slate-600 mt-1" data-i18n="tech2Desc">捕捉香港密集高樓與郊野公園、世界地質公園及濕地公園相依共存的獨特景觀。</p>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-br from-emerald-50 to-teal-50 p-6 rounded-2xl border border-emerald-100 flex items-start space-x-4">
+                    <div class="w-12 h-12 rounded-xl bg-hkjade text-white flex items-center justify-center shrink-0 text-xl font-bold shadow-md shadow-emerald-200">
+                        <i class="fa-solid fa-street-view"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-lg" data-i18n="tech3Title">社區人文故事</h3>
+                        <p class="text-xs text-slate-600 mt-1" data-i18n="tech3Desc">拍攝熱鬧分區街景、老字號店舖、古樸水鄉棚屋與早期公共屋邨的歲月人文。</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quests List Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="assignments-grid">
+                <!-- Assignments injected dynamically -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Student Submissions Gallery Showcase -->
+    <section id="gallery-section" class="py-16 bg-slate-900 text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+                <div>
+                    <span class="text-amber-400 font-bold text-xs tracking-widest uppercase bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/20" data-i18n="galleryBadge">學生作品藝廊</span>
+                    <h2 class="text-3xl font-extrabold text-white mt-2" data-i18n="galleryTitle">最新學生社區攝影作品集</h2>
+                    <p class="text-slate-400 text-sm mt-1" data-i18n="galleryDesc">欣賞來自全港中小學生的優秀攝影作品，激發創作靈感。</p>
+                </div>
+                <button onclick="openUploadModal()" class="self-start md:self-auto bg-gradient-to-r from-hkred to-rose-600 hover:from-rose-600 hover:to-hkred text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-lg shadow-rose-900/40 flex items-center space-x-2">
+                    <i class="fa-solid fa-camera"></i>
+                    <span data-i18n="galleryShareBtn">分享你的作品</span>
+                </button>
+            </div>
+
+            <!-- Gallery Wall Grid -->
+            <div id="student-gallery-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Photo Cards injected dynamically -->
+            </div>
+        </div>
+    </section>
+
+    <!-- District & Landmark Detail Modal -->
+    <div id="landmark-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm overflow-y-auto">
+        <div class="bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden relative max-h-[90vh] flex flex-col my-8 animate-in fade-in zoom-in duration-200">
+            <!-- Modal Header Image -->
+            <div class="relative h-64 sm:h-72 w-full bg-slate-900">
+                <img id="modal-img" src="" alt="" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/30"></div>
+                
+                <button onclick="closeModal('landmark-modal')" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-slate-900/60 text-white flex items-center justify-center hover:bg-slate-900 transition-colors z-10">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+
+                <div class="absolute bottom-4 left-6 right-6 text-white">
+                    <span id="modal-region-badge" class="text-xs font-bold uppercase tracking-widest bg-hkred px-3 py-1 rounded-full mb-2 inline-block">Region</span>
+                    <h3 id="modal-title" class="text-2xl sm:text-3xl font-extrabold">District Name</h3>
+                    <p id="modal-landmark-name" class="text-amber-300 font-semibold text-sm sm:text-base flex items-center gap-1.5">
+                        <i class="fa-solid fa-location-dot"></i> Landmark Title
+                    </p>
+                </div>
+            </div>
+
+            <!-- Modal Body Content -->
+            <div class="p-6 sm:p-8 overflow-y-auto custom-scrollbar space-y-6 flex-1 text-slate-700 text-sm sm:text-base">
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2" data-i18n="modalHistoryHeader">分區歷史與背景</h4>
+                    <p id="modal-history" class="leading-relaxed text-slate-600">History description...</p>
+                </div>
+
+                <div class="bg-slate-50 border border-slate-200 p-5 rounded-2xl">
+                    <h4 class="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-building-columns text-hkblue"></i> <span data-i18n="modalArchHeader">建築亮點與風格分析</span>
+                    </h4>
+                    <p id="modal-architecture" class="text-slate-600 text-sm leading-relaxed">Architecture details...</p>
+                </div>
+
+                <div class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-5 rounded-2xl">
+                    <h4 class="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-camera text-hkgold"></i> <span data-i18n="modalTipHeader">學生攝影任務建議</span>
+                    </h4>
+                    <p id="modal-quest-tip" class="text-slate-700 text-sm leading-relaxed">Quest tip...</p>
+                </div>
+
+                <!-- Action Button in Modal -->
+                <div class="flex items-center justify-between pt-4 border-t border-slate-100">
+                    <button onclick="claimPassportStamp()" id="claim-stamp-btn" class="bg-hkgold hover:bg-amber-600 text-white font-bold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2 shadow-md">
+                        <i class="fa-solid fa-stamp"></i> <span data-i18n="modalClaimBtn">收集分區歷奇印章</span>
+                    </button>
+                    <button onclick="openUploadModalForCurrent()" class="bg-hkred hover:bg-rose-700 text-white font-bold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2 shadow-md">
+                        <i class="fa-solid fa-upload"></i> <span data-i18n="modalUploadBtn">上傳該區相片</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Passport Modal -->
+    <div id="passport-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden relative max-h-[90vh] flex flex-col p-6 sm:p-8">
+            <button onclick="closeModal('passport-modal')" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 transition-colors">
+                <i class="fa-solid fa-xmark text-base"></i>
+            </button>
+
+            <div class="flex items-center space-x-4 mb-6">
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-500 to-hkgold text-white flex items-center justify-center text-3xl shadow-lg shadow-amber-200">
+                    <i class="fa-solid fa-passport"></i>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-extrabold text-slate-900" data-i18n="passportTitle">香港社區歷奇護照</h3>
+                    <p class="text-xs text-slate-500" data-i18n="passportSub">全港十八區探索學習手冊</p>
+                </div>
+            </div>
+
+            <!-- Stamp Progress Bar -->
+            <div class="mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <div class="flex justify-between text-xs font-bold text-slate-700 mb-1.5">
+                    <span data-i18n="passportProgress">18區歷奇印章收集進度</span>
+                    <span id="passport-progress-text">0 / 18</span>
+                </div>
+                <div class="w-full bg-slate-200 h-3 rounded-full overflow-hidden">
+                    <div id="passport-progress-bar" class="bg-gradient-to-r from-hkgold to-hkred h-full w-0 transition-all duration-500"></div>
+                </div>
+            </div>
+
+            <!-- Stamps Grid -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar pr-2">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3" data-i18n="passportStampsHeader">分區探索印章庫</h4>
+                <div id="passport-stamps-grid" class="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                    <!-- 18 stamp circles generated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Photo Modal -->
+    <div id="upload-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden relative max-h-[90vh] flex flex-col p-6 sm:p-8">
+            <button onclick="closeModal('upload-modal')" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 transition-colors">
+                <i class="fa-solid fa-xmark text-base"></i>
+            </button>
+
+            <div class="mb-6">
+                <h3 class="text-2xl font-extrabold text-slate-900" data-i18n="uploadTitle">提交學生攝影作品</h3>
+                <p class="text-xs text-slate-500" data-i18n="uploadSub">分享你在香港十八區拍攝的建築或景點相片。</p>
+            </div>
+
+            <form id="upload-form" onsubmit="handlePhotoUpload(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" data-i18n="uploadLabelName">學生姓名 / 班別學校</label>
+                    <input type="text" id="upload-author" required placeholder="例如: 黃小明 (中三級, 聖保羅書院)" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-hkred focus:outline-none text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" data-i18n="uploadLabelDistrict">選擇分區</label>
+                    <select id="upload-district" required class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-hkred focus:outline-none text-sm bg-white">
+                        <!-- Options generated by JS -->
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" data-i18n="uploadLabelLandmark">地標 / 拍攝主題</label>
+                    <input type="text" id="upload-landmark" required placeholder="例如: 文武廟飛簷綠瓦細節" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-hkred focus:outline-none text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" data-i18n="uploadLabelDesc">相片描述與構圖心得</label>
+                    <textarea id="upload-desc" rows="3" required placeholder="描述你觀察到的建築或歷史特色，以及為何選擇這個視角構圖..." class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-hkred focus:outline-none text-sm"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1" data-i18n="uploadLabelUrl">相片網址 (可選，留空使用預設檔)</label>
+                    <input type="url" id="upload-url" placeholder="貼上相片網址或留空使用系統預設示範圖" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-hkred focus:outline-none text-sm">
+                </div>
+
+                <div class="pt-2 flex justify-end gap-3">
+                    <button type="button" onclick="closeModal('upload-modal')" class="px-5 py-2.5 rounded-xl text-sm font-bold border border-slate-300 text-slate-700 hover:bg-slate-50" data-i18n="uploadCancelBtn">取消</button>
+                    <button type="submit" class="px-6 py-2.5 rounded-xl text-sm font-bold bg-hkred text-white hover:bg-rose-700 shadow-md" data-i18n="uploadSubmitBtn">發佈作品</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-3 pointer-events-none"></div>
+
+    <!-- Footer -->
+    <footer class="bg-slate-950 text-slate-400 py-12 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                <div class="md:col-span-2 space-y-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-hkred flex items-center justify-center text-white font-bold">
+                            <i class="fa-solid fa-camera-retro"></i>
+                        </div>
+                        <h4 class="text-lg font-bold text-white" data-i18n="footerTitle">HK 18 Explorer 全港十八區歷奇</h4>
+                    </div>
+                    <p class="text-xs text-slate-400 leading-relaxed max-w-md" data-i18n="footerDesc">
+                        專為香港中小學生設計的社區探索與數碼攝影學習資源平台，旨在推動情境學習、文物保育意識及全港十八區藝術觀察力。
+                    </p>
+                </div>
+
+                <div>
+                    <h5 class="text-white font-bold text-sm mb-3" data-i18n="footerHeaderRegion">區域分類導賞</h5>
+                    <ul class="text-xs space-y-2 text-slate-400">
+                        <li><a href="#map-section" onclick="filterMapRegion('hk-island')" class="hover:text-amber-400" data-i18n="footerLinkHK">Hong Kong Island (港島區)</a></li>
+                        <li><a href="#map-section" onclick="filterMapRegion('kowloon')" class="hover:text-amber-400" data-i18n="footerLinkKLN">Kowloon (九龍區)</a></li>
+                        <li><a href="#map-section" onclick="filterMapRegion('new-territories')" class="hover:text-amber-400" data-i18n="footerLinkNT">New Territories (新界區)</a></li>
+                        <li><a href="#map-section" onclick="filterMapRegion('islands')" class="hover:text-amber-400" data-i18n="footerLinkISL">Islands (離島區)</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h5 class="text-white font-bold text-sm mb-3" data-i18n="footerHeaderSafety">考察與安全提示</h5>
+                    <ul class="text-xs space-y-2 text-slate-400">
+                        <li><i class="fa-solid fa-shield-halved text-hkjade mr-1"></i> <span data-i18n="footerSafety1">請始終在成人或老師陪同下進行戶外觀察</span></li>
+                        <li><i class="fa-solid fa-sun text-hkgold mr-1"></i> <span data-i18n="footerSafety2">戶外攝影請適時補充水分與防曬</span></li>
+                        <li><i class="fa-solid fa-heart text-hkred mr-1"></i> <span data-i18n="footerSafety3">愛護歷史古蹟，尊重私人物業與社區居民</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="pt-8 border-t border-slate-800 text-center text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <p data-i18n="footerCopyright">&copy; 2026 香港中小學歷史建築與社區攝影學習計劃</p>
+                <div class="flex space-x-4">
+                    <span class="bg-slate-800 text-slate-300 px-3 py-1 rounded-full" data-i18n="footerTagline">中小學跨學科專題研習教學資源</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Current Language State: 'en' or 'zh'
+        let currentLang = 'zh'; // Default to Traditional Chinese for HK audience
+
+        // Global State Variables
+        let map;
+        let mapMarkers = [];
+        let collectedStamps = JSON.parse(localStorage.getItem('hk_explorer_stamps') || '[]');
+        let currentSelectedDistrict = null;
+
+        // Student Submissions Dataset with full English & Chinese support
+        let studentSubmissions = [
+            {
+                id: 1,
+                author: 'Alex Chan (Form 4, Queen\'s College)',
+                authorZh: '陳大文 (中四, 皇仁書院)',
+                districtId: 'central-western',
+                landmark: 'Tai Kwun Red Brick Courtyard',
+                landmarkZh: '大館紅磚廣場拱廊',
+                desc: 'Framed the historic 19th century brick arches with modern skyscrapers in the background during golden hour.',
+                descZh: '在黃昏黃金時刻拍攝，以大館19世紀紅磚拱廊為框景，襯托背景中環高聳的現代摩天大樓。',
+                img: 'https://images.unsplash.com/photo-1518599807936-9f2b84a9e59d?auto=format&fit=crop&w=800&q=80',
+                likes: 24
+            },
+            {
+                id: 2,
+                author: 'Sofia Lee (P6, Diocesan Girls\' Junior School)',
+                authorZh: '李思穎 (小六, 拔萃女小學)',
+                districtId: 'yau-tsim-mong',
+                landmark: 'Clock Tower Waterfront Reflection',
+                landmarkZh: '尖沙咀鐘樓海旁倒影',
+                desc: 'Patience paid off waiting for the Star Ferry to cross behind the iconic TST Clock Tower at twilight.',
+                descZh: '在暮色時分耐心等待天星小輪航經標誌性的尖沙咀鐘樓後方，記錄下浪漫的海港畫面。',
+                img: 'https://images.unsplash.com/photo-1577003833619-76bbd7f82948?auto=format&fit=crop&w=800&q=80',
+                likes: 38
+            },
+            {
+                id: 3,
+                author: 'Kevin Wong (Form 2, St. Joseph\'s College)',
+                authorZh: '黃家榮 (中二, 聖若瑟書院)',
+                districtId: 'wan-chai',
+                landmark: 'Blue House Balcony Perspective',
+                landmarkZh: '灣仔藍屋露台仰角構圖',
+                desc: 'Upward perspective of the vibrant blue balconies against the bustling Wan Chai street canopy.',
+                descZh: '從街道仰角拍攝鮮艷藍色的唐樓露台，與灣仔熙來攘往的綠色街景形成鮮明層次。',
+                img: 'https://images.unsplash.com/photo-1536599018102-9f803c140fc1?auto=format&fit=crop&w=800&q=80',
+                likes: 19
+            },
+            {
+                id: 4,
+                author: 'Chloe Ho (Form 5, Shatin Tsung Tsin Secondary School)',
+                authorZh: '何曉琳 (中五, 沙田崇真中學)',
+                districtId: 'sai-kung',
+                landmark: 'Hexagonal Basalt Columns at High Island',
+                landmarkZh: '糧船灣六角形火山岩柱',
+                desc: 'Nature\'s geometry at its finest! Captured the vertical symmetry of the ancient volcanic rock columns.',
+                descZh: '大自然的幾何傑作！捕捉了遠古火山噴發冷卻形成的六角形玄武岩柱垂直對稱美感。',
+                img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
+                likes: 31
+            }
+        ];
+
+        // UI Translation Dictionary
+        const i18n = {
+            en: {
+                langButtonLabel: '繁體中文',
+                navMap: '18 District Map',
+                navLandmarks: 'Landmarks',
+                navQuests: 'Photo Quests',
+                navGallery: 'Student Showcase',
+                navPassport: 'My Passport',
+                navSubmit: 'Submit Photo',
+                heroBadge: 'For HK Primary & Secondary Students | Place-Based Learning',
+                heroTitle: 'Explore <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-rose-400 to-sky-400">Hong Kong\'s 18 Districts</span> Through Your Lens',
+                heroDesc: 'Discover architectural history, ancient temples, coastal heritage, and modern skyscrapers. Complete photography challenges, build your digital heritage passport, and showcase your creative vision!',
+                statDistricts: 'Districts',
+                statDistrictsSub: '18 Administrative Districts',
+                statLandmarks: 'Landmarks',
+                statLandmarksSub: 'Heritage & Attractions',
+                statQuests: 'Photo Quests',
+                statQuestsSub: 'Photography Challenges',
+                featuredBadge: 'Featured Quest',
+                featuredDistrictTag: 'Yau Tsim Mong District',
+                featuredGrade: 'Grade 4 - 12 (P4-F6)',
+                featuredTitle: 'Tsim Sha Tsui Railway Clock Tower',
+                featuredDesc: 'Built in 1915 as part of the KCR terminus. Capture the contrast between red brick Edwardian architecture & Victoria Harbour modern skyscrapers!',
+                featuredExploreBtn: 'Explore Landmark Details & Tips',
+                mapBadge: 'Interactive HK Map',
+                mapTitle: 'Explore All 18 Districts of Hong Kong',
+                mapDesc: 'Click any district marker on the map to inspect attractions, architectural histories, and photography assignment details.',
+                btnFilterAll: 'All Regions (18 Districts)',
+                btnFilterHK: 'Hong Kong Island (4)',
+                btnFilterKLN: 'Kowloon (5)',
+                btnFilterNT: 'New Territories (8)',
+                btnFilterISL: 'Islands (1)',
+                mapTipTitle: 'Tip for Students:',
+                mapTipDesc: 'Zoom in & click markers to open landmark guides!',
+                directoryBadge: 'Landmarks Directory',
+                directoryTitle: '18 District Heritage & Landmark Guides',
+                directoryDesc: 'Detailed building descriptions, architectural styles, and historical facts tailored for school projects.',
+                searchPlaceholder: 'Search district, landmark, or historical keywords...',
+                questsBadge: 'Learning Through Photography',
+                questsTitle: 'Hong Kong Student Photo Quests',
+                questsDesc: 'Practice composition techniques while exploring Hong Kong\'s rich built environment and natural heritage.',
+                tech1Title: 'Architectural Symmetry & Geometry',
+                tech1Desc: 'Focus on traditional rooflines, granite archways, and modern tower lines across HK heritage temples and government structures.',
+                tech2Title: 'Urban vs Nature Contrast',
+                tech2Desc: 'Capture Hong Kong\'s unique landscape where dense high-rises sit side-by-side with country parks, geoparks, and wetlands.',
+                tech3Title: 'Community & Cultural Stories',
+                tech3Desc: 'Photograph vibrant district life, traditional shops, old fishing villages, and historic public housing estates.',
+                galleryBadge: 'Student Gallery',
+                galleryTitle: 'Recent Student Photo Submissions',
+                galleryDesc: 'Inspirational photographs taken by fellow HK primary & secondary school students.',
+                galleryShareBtn: 'Share Your Photo',
+                modalHistoryHeader: 'District History & Overview',
+                modalArchHeader: 'Architectural Highlights & Style Analysis',
+                modalTipHeader: 'Student Photography Quest Tip',
+                modalClaimBtn: 'Collect District Stamp',
+                modalClaimedBtn: 'Stamp Claimed!',
+                modalUploadBtn: 'Upload Photo Here',
+                passportTitle: 'Hong Kong Heritage Passport',
+                passportSub: 'Student District Explorer Logbook',
+                passportProgress: '18 District Explorer Stamp Progress',
+                passportStampsHeader: 'District Exploration Stamps',
+                uploadTitle: 'Submit Student Photography',
+                uploadSub: 'Share your photo taken at one of Hong Kong\'s 18 districts.',
+                uploadLabelName: 'Student Name / Class & School',
+                uploadLabelDistrict: 'Select District',
+                uploadLabelLandmark: 'Landmark / Subject',
+                uploadLabelDesc: 'Photo Description & Technique Note',
+                uploadLabelUrl: 'Photo Image URL (Optional)',
+                uploadCancelBtn: 'Cancel',
+                uploadSubmitBtn: 'Publish Submission',
+                footerTitle: 'HK 18 Explorer Project',
+                footerDesc: 'Designed for Hong Kong primary and secondary school students to promote place-based learning, heritage preservation, and digital photography skills across all 18 districts.',
+                footerHeaderRegion: 'Districts by Region',
+                footerLinkHK: 'Hong Kong Island',
+                footerLinkKLN: 'Kowloon',
+                footerLinkNT: 'New Territories',
+                footerLinkISL: 'Islands',
+                footerHeaderSafety: 'Fieldtrip Safety Tips',
+                footerSafety1: 'Always travel with adult/teacher supervision',
+                footerSafety2: 'Stay hydrated and sun-protected during outdoor photo walks',
+                footerSafety3: 'Respect heritage sites, local residents, and private property',
+                footerCopyright: '© 2026 Hong Kong School Heritage & Photography Learning Initiative.',
+                footerTagline: 'Primary & Secondary Interdisciplinary Resource',
+                inputNamePlaceholder: 'e.g. Chris Wong (Form 3, St. Paul\'s)',
+                inputLandmarkPlaceholder: 'e.g. Roof detail of Man Mo Temple',
+                inputDescPlaceholder: 'Describe what you observed about the architecture or history, and why you framed it this way...',
+                inputUrlPlaceholder: 'Paste Image URL or leave blank for auto-sample photo'
+            },
+            zh: {
+                langButtonLabel: 'English',
+                navMap: '18區地圖',
+                navLandmarks: '古蹟景點',
+                navQuests: '攝影任務',
+                navGallery: '學生作品集',
+                navPassport: '我的護照',
+                navSubmit: '提交作品',
+                heroBadge: '全港中小學生社區歷奇與攝影學習平台',
+                heroTitle: '用鏡頭探索 <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-rose-400 to-sky-400">香港十八區</span> 建築與歷史文化',
+                heroDesc: '走訪歷史古蹟、百年古廟、海岸自然與現代摩天大樓。完成社區攝影挑戰，集齊18區數碼歷奇印章，展示你的創意視角！',
+                statDistricts: '行政分區',
+                statDistrictsSub: '涵蓋全港18區',
+                statLandmarks: '古蹟景點',
+                statLandmarksSub: '特色建築與歷史導賞',
+                statQuests: '攝影任務',
+                statQuestsSub: '提升觀察力與構圖技巧',
+                featuredBadge: '精選任務',
+                featuredDistrictTag: '油尖旺區 Yau Tsim Mong',
+                featuredGrade: '小四至中六級別',
+                featuredTitle: '尖沙咀前九廣鐵路鐘樓',
+                featuredDesc: '建於1915年，為舊九廣鐵路總站的標誌建築。捕捉紅磚愛德華式古典建築與維港現代摩天大樓的強烈對比！',
+                featuredExploreBtn: '查看景點導賞與攝影提示',
+                mapBadge: '互動香港地圖',
+                mapTitle: '探索香港十八區歷史景點',
+                mapDesc: '點擊地圖上的分區標記，即時查看各區著名地標、建築特色及專屬攝影挑戰。',
+                btnFilterAll: '全港 18 區',
+                btnFilterHK: '港島區 (4區)',
+                btnFilterKLN: '九龍區 (5區)',
+                btnFilterNT: '新界區 (8區)',
+                btnFilterISL: '離島區 (1區)',
+                mapTipTitle: '學生探索小貼士：',
+                mapTipDesc: '放大地圖並點擊相機圖示即可開啟景點指南！',
+                directoryBadge: '地標導賞目錄',
+                directoryTitle: '十八區歷史建築與景點指南',
+                directoryDesc: '專為中小學專題研習設計，深入了解建築風格、歷史由來與文化價值。',
+                searchPlaceholder: '搜尋分區、地標或歷史關鍵字...',
+                questsBadge: '從攝影中學習',
+                questsTitle: '全港學生社區攝影挑戰任務',
+                questsDesc: '學習對稱、對比與空間構圖，捕捉香港獨特的都市與自然共融景致。',
+                tech1Title: '建築幾何與對稱感',
+                tech1Desc: '專注於傳統廟宇飛簷、石柱拱廊與現代摩天大樓的垂直與幾何對稱線條。',
+                tech2Title: '都市與自然對比',
+                tech2Desc: '捕捉香港密集高樓與郊野公園、世界地質公園及濕地公園相依共存的獨特景觀。',
+                tech3Title: '社區人文故事',
+                tech3Desc: '拍攝熱鬧分區街景、老字號店舖、古樸水鄉棚屋與早期公共屋邨的歲月人文。',
+                galleryBadge: '學生作品藝廊',
+                galleryTitle: '最新學生社區攝影作品集',
+                galleryDesc: '欣賞來自全港中小學生的優秀攝影作品，激發創作靈感。',
+                galleryShareBtn: '分享你的作品',
+                modalHistoryHeader: '分區歷史與背景',
+                modalArchHeader: '建築亮點與風格分析',
+                modalTipHeader: '學生攝影任務建議',
+                modalClaimBtn: '收集分區歷奇印章',
+                modalClaimedBtn: '已收集印章！',
+                modalUploadBtn: '上傳該區相片',
+                passportTitle: '香港社區歷奇護照',
+                passportSub: '全港十八區探索學習手冊',
+                passportProgress: '18區歷奇印章收集進度',
+                passportStampsHeader: '分區探索印章庫',
+                uploadTitle: '提交學生攝影作品',
+                uploadSub: '分享你在香港十八區拍攝的建築或景點相片。',
+                uploadLabelName: '學生姓名 / 班別學校',
+                uploadLabelDistrict: '選擇分區',
+                uploadLabelLandmark: '地標 / 拍攝主題',
+                uploadLabelDesc: '相片描述與構圖心得',
+                uploadLabelUrl: '相片網址 (可選，留空使用預設檔)',
+                uploadCancelBtn: '取消',
+                uploadSubmitBtn: '發佈作品',
+                footerTitle: 'HK 18 Explorer 全港十八區歷奇',
+                footerDesc: '專為香港中小學生設計的社區探索與數碼攝影學習資源平台，旨在推動情境學習、文物保育意識及全港十八區藝術觀察力。',
+                footerHeaderRegion: '區域分類導賞',
+                footerLinkHK: '港島區 (Hong Kong Island)',
+                footerLinkKLN: '九龍區 (Kowloon)',
+                footerLinkNT: '新界區 (New Territories)',
+                footerLinkISL: '離島區 (Islands)',
+                footerHeaderSafety: '考察與安全提示',
+                footerSafety1: '請始終在成人或老師陪同下進行戶外觀察',
+                footerSafety2: '戶外攝影請適時補充水分與防曬',
+                footerSafety3: '愛護歷史古蹟，尊重私人物業與社區居民',
+                footerCopyright: '© 2026 香港中小學歷史建築與社區攝影學習計劃',
+                footerTagline: '中小學跨學科專題研習教學資源',
+                inputNamePlaceholder: '例如: 黃小明 (中三級, 聖保羅書院)',
+                inputLandmarkPlaceholder: '例如: 文武廟飛簷綠瓦細節',
+                inputDescPlaceholder: '描述你觀察到的建築或歷史特色，以及為何選擇這個視角構圖...',
+                inputUrlPlaceholder: '貼上相片網址或留空使用系統預設示範圖'
+            }
+        };
+
+        // Complete Bilingual Data for all 18 Districts of Hong Kong
+        const hkDistricts = [
+            // HONG KONG ISLAND (4 Districts)
+            {
+                id: 'central-western',
+                name: 'Central & Western',
+                nameZh: '中西區',
+                region: 'hk-island',
+                regionName: 'Hong Kong Island',
+                regionNameZh: '香港島',
+                coords: [22.2819, 114.1581],
+                landmark: 'Tai Kwun & Man Mo Temple',
+                landmarkZh: '大館與文武廟',
+                img: 'https://images.unsplash.com/photo-1518599807936-9f2b84a9e59d?auto=format&fit=crop&w=800&q=80',
+                history: 'Central & Western District is the historic heart of Victoria City, founded in 1841. Tai Kwun served as the Central Police Station, Magistracy, and Victoria Gaol for over 170 years before its revitalisation into a world-class arts center.',
+                historyZh: '中西區是香港維多利亞城的歷史發源地。古蹟「大館」前身為中區警署、裁判司署及域多利監獄，擁有逾170年歷史，現已活化為國際級藝術與文化遺產園區。',
+                architecture: 'Combines Victorian and Edwardian brick architecture with neoclassical archways and modern steel glass structures. Man Mo Temple features traditional Qing dynasty Lingnan temple architecture with green tiled roofs.',
+                architectureZh: '大館融合維多利亞式及愛德華式紅磚建築風格，並配以新古典主義拱廊與現代鋼構幾何展館；文武廟則保留典型的清代嶺南傳統廟宇建築特色，青瓦綠脊，典雅莊嚴。',
+                questTip: 'Capture the dramatic contrast between the 19th-century red-brick arches of Tai Kwun and the soaring glass skyscrapers of Central in a single frame.',
+                questTipTipZh: '在同一個畫面中，同時拍攝大館19世紀的紅磚拱廊與背景中環聳立的現代玻璃幕牆大廈，展現新舊建築的強烈對比。',
+                assignmentTitle: 'Colonial History meets Modern Skyline',
+                assignmentTitleZh: '殖民時代歷史與現代摩天天際線'
+            },
+            {
+                id: 'wan-chai',
+                name: 'Wan Chai',
+                nameZh: '灣仔區',
+                region: 'hk-island',
+                regionName: 'Hong Kong Island',
+                regionNameZh: '香港島',
+                coords: [22.2760, 114.1751],
+                landmark: 'Blue House & HKCEC',
+                landmarkZh: '藍屋與會展中心',
+                img: 'https://images.unsplash.com/photo-1536599018102-9f803c140fc1?auto=format&fit=crop&w=800&q=80',
+                history: 'Wan Chai evolved from a quiet coastal village into a dynamic cultural hub. The Blue House, built in the 1920s, is a Grade I historic Tong Lau (tenement building) representing pre-war residential life.',
+                historyZh: '灣仔從清代的沿海漁村演變為今日色彩斑斕的文化樞紐。「藍屋」建於1920年代，為一級歷史建築，代表戰前嶺南唐樓的社區生活風貌。',
+                architecture: 'The Blue House features Lingnan style Tong Lau architecture with timber stairs, cast-iron balcony railings, and bright turquoise exterior walls.',
+                architectureZh: '藍屋展現傳統嶺南唐樓風格，保留了珍貴的木製樓梯、鑄鐵陽台欄杆以及鮮艷的鮮藍色外牆。',
+                questTip: 'Look up from stone-paved alleys to frame the vibrant blue balcony railings against the dramatic urban backdrop.',
+                questTipZh: '從石板路小巷仰拍，將藍屋鮮艷的藍色陽台欄杆與高聳的城市背景組合成對角線構圖。',
+                assignmentTitle: 'Vibrant Colors of Tong Lau',
+                assignmentTitleZh: '戰前唐樓的鮮艷色彩與社區記憶'
+            },
+            {
+                id: 'eastern',
+                name: 'Eastern District',
+                nameZh: '東區',
+                region: 'hk-island',
+                regionName: 'Hong Kong Island',
+                regionNameZh: '香港島',
+                coords: [22.2840, 114.2240],
+                landmark: 'Yick Cheong Building & Coastal Museum',
+                landmarkZh: '益昌大廈(怪獸大廈)與海防博物館',
+                img: 'https://images.unsplash.com/photo-1506970845246-18f21d533b20?auto=format&fit=crop&w=800&q=80',
+                history: 'Eastern District developed from 19th-century quarrying and shipbuilding villages (Quarry Bay, Shau Kei Wan) into a high-density residential and commercial center.',
+                historyZh: '東區由19世紀鰂魚涌採石場及筲箕灣造船廠演變而來，如今已成為高度密集而充滿活力的住宅與商貿區。',
+                architecture: 'Yick Cheong Building ("Monster Building") showcases 1960s composite high-density residential architecture, forming a dramatic symmetrical urban courtyard.',
+                architectureZh: '益昌大廈（俗稱怪獸大廈）展示了1960年代香港典型的綜合商住高密度建築，天井形成視覺衝擊力極強的對稱天井景象。',
+                questTip: 'Stand inside the inner courtyard and shoot straight upwards using a wide-angle lens to capture the famous geometric frame of windows.',
+                questTipZh: '站在天井中央使用廣角鏡頭垂直向上仰拍，利用四周密集的窗戶線條構建出極具幾何質感的「城市天井」。',
+                assignmentTitle: 'High-Density Urban Geometry',
+                assignmentTitleZh: '高密度都市幾何與天井視角'
+            },
+            {
+                id: 'southern',
+                name: 'Southern District',
+                nameZh: '南區',
+                region: 'hk-island',
+                regionName: 'Hong Kong Island',
+                regionNameZh: '香港島',
+                coords: [22.2470, 114.1590],
+                landmark: 'Stanley Murray House & Repulse Bay',
+                landmarkZh: '赤柱美利樓與淺水灣',
+                img: 'https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=800&q=80',
+                history: 'Murray House was originally built in Central in 1846 as British officer quarters and dismantled block-by-block, then reassembled in Stanley in 2002—a monumental engineering feat.',
+                historyZh: '美利樓於1846年建於中環，原為英軍官兵宿舍。1980年代拆卸後將3,000多塊花崗岩碼編號，並於2002年在赤柱成功重建，為香港建築保育的里程碑。',
+                architecture: 'Classic Victorian colonial military architecture featuring doric granite columns, wide verandas, and high ceilings for tropical ventilation.',
+                architectureZh: '典型維多利亞式殖民地軍事建築，擁有圓形多立克柱式花崗岩石柱、寬闊柱廊及適應熱帶氣候的高天花設計。',
+                questTip: 'Photograph the repetitive granite columns of Murray House leading towards the sea at sunset to practice vanishing point perspective.',
+                questTipZh: '利用美利樓排列整齊的花崗岩石柱作為引導線，拍攝夕陽西下時延伸至海邊的透視空間感。',
+                assignmentTitle: 'Symmetry in Stone Columns',
+                assignmentTitleZh: '古典石柱的透視與對稱之美'
+            },
+
+            // KOWLOON (5 Districts)
+            {
+                id: 'yau-tsim-mong',
+                name: 'Yau Tsim Mong',
+                nameZh: '油尖旺區',
+                region: 'kowloon',
+                regionName: 'Kowloon',
+                regionNameZh: '九龍',
+                coords: [22.3117, 114.1708],
+                landmark: 'TST Clock Tower & Temple Street',
+                landmarkZh: '尖沙咀鐘樓與廟街 night market',
+                img: 'https://images.unsplash.com/photo-1577003833619-76bbd7f82948?auto=format&fit=crop&w=800&q=80',
+                history: 'The 44-meter Clock Tower was erected in 1915 as part of the Kowloon-Canton Railway Terminus. It served as a landmark for millions of immigrants arriving in HK.',
+                architecture: 'Edwardian Classical Revival architecture constructed from red brick and granite elements, topped with a copper dome and clock faces on four sides.',
+                questTip: 'Capture the reflection of the Clock Tower in the surrounding water fountains or pair it with passing Star Ferries.',
+                historyZh: '高44米的尖沙咀鐘樓建於1915年，原為九廣鐵路舊尖沙咀總站的一部分，見證了無數旅客與移民抵達香港的歷史時刻。',
+                architectureZh: '愛德華時代古典復興風格建築，由紅磚及花崗岩砌築而成，頂部設有圓頂銅頂及四面報時大鐘。',
+                questTipZh: '利用鐘樓旁水池的倒影進行水面反射構圖，或將天星小輪與鐘樓一同納入鏡頭中。',
+                assignmentTitle: 'Reflections of Maritime History',
+                assignmentTitleZh: '海旁鐘樓倒影與鐵路歷史'
+            },
+            {
+                id: 'sham-shui-po',
+                name: 'Sham Shui Po',
+                nameZh: '深水埗區',
+                region: 'kowloon',
+                regionName: 'Kowloon',
+                regionNameZh: '九龍',
+                coords: [22.3307, 114.1622],
+                landmark: 'Mei Ho House & JCCAC',
+                landmarkZh: '美荷樓與賽馬會創意藝術中心',
+                img: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=800&q=80',
+                history: 'Mei Ho House was built following the disastrous 1953 Shek Kip Mei fire. It marked the birth of Hong Kong’s public housing system.',
+                historyZh: '1953年石硤尾大火後政府興建了美荷樓，象徵著香港公營房屋政策的正式開端，現已活化為青年旅舍及展覽館。',
+                architecture: 'H-shaped public housing block featuring open corridor access, minimalistic design, and concrete structure designed for rapid emergency rehousing.',
+                architectureZh: '經典的「H型」第一型徙置大廈，設計強調簡約實用與開放式長廊，展現早年香港基層社群的互助精神。',
+                questTip: 'Focus on the geometric corridors and nostalgic green window frames to tell the story of early public housing resilience.',
+                questTipZh: '專注於H型大廈長廊的重複幾何線條與復古綠色窗框，記錄早年公屋的歲月痕跡。',
+                assignmentTitle: 'Corridor Perspective & Community Spirit',
+                assignmentTitleZh: '公屋長廊透視與基層社區歲月'
+            },
+            {
+                id: 'kowloon-city',
+                name: 'Kowloon City',
+                nameZh: '九龍城區',
+                region: 'kowloon',
+                regionName: 'Kowloon',
+                regionNameZh: '九龍',
+                coords: [22.3282, 114.1916],
+                landmark: 'Kowloon Walled City Park & Kai Tak',
+                landmarkZh: '九龍寨城公園與啟德郵輪碼頭',
+                img: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=800&q=80',
+                history: 'Formerly a Chinese military fort and later the famed densely populated enclave, the area was converted in 1995 into a Jiangnan-style Qing Dynasty garden preserving ancient artifacts.',
+                historyZh: '原為清朝駐軍防衛要塞，後演變為傳奇的九龍寨城。1995年改建為江南園林風格公園，保存了衙門古蹟與石匾。',
+                architecture: 'Classic Jiangnan garden architecture with tiled pavilions, stone bridges, ornate lotus ponds, and preserved fort granite gateway plaques.',
+                architectureZh: '採用清代江南園林佈局，設有亭台樓閣、曲橋荷池，並保留了清代衙門花崗岩門匾等珍貴文物。',
+                questTip: 'Frame traditional moon gates with lush greenery and weeping willows to capture peaceful classical Chinese aesthetics.',
+                questTipZh: '善用公園內的圓形拱門（月洞門）作框景，將綠柳與亭台樓閣納入框中，展現傳統園林美學。',
+                assignmentTitle: 'Moon Gates & Traditional Gardens',
+                assignmentTitleZh: '拱門框景與江南園林美學'
+            },
+            {
+                id: 'wong-tai-sin',
+                name: 'Wong Tai Sin',
+                nameZh: '黃大仙區',
+                region: 'kowloon',
+                regionName: 'Kowloon',
+                regionNameZh: '九龍',
+                coords: [22.3417, 114.1942],
+                landmark: 'Wong Tai Sin Temple & Nan Lian Garden',
+                landmarkZh: '嗇色園黃大仙祠與南蓮園池',
+                img: 'https://images.unsplash.com/photo-1513415564515-763d91423bdd?auto=format&fit=crop&w=800&q=80',
+                history: 'Wong Tai Sin Temple was established in 1921. Nearby Chi Lin Nunnery & Nan Lian Garden were rebuilt in the 1990s following Tang Dynasty architectural masterplans.',
+                historyZh: '黃大仙祠始建於1921年；鄰近的志蓮淨苑與南蓮園池則於1990年代依照唐代木結構建築規制古法重建。',
+                architecture: 'Tang Dynasty timber-locking architecture constructed entirely without nails, featuring golden roofs, red cedar posts, and carefully pruned bonsai trees.',
+                architectureZh: '採用唐代榫卯木結構建築古法，全棟不使用金屬釘，搭配金黃色琉璃瓦、紅檜木柱與精緻盆景。',
+                questTip: 'Photograph the Pavilion of Absolute Perfection over the lotus pond during morning light to capture vibrant gold reflections.',
+                questTipZh: '清晨拍攝池塘中央的「圓滿閣」，捕捉陽光照耀下金黃色八角亭在水面上的明亮倒影。',
+                assignmentTitle: 'Golden Roofs of Tang Dynasty Style',
+                assignmentTitleZh: '唐代榫卯木構與金閣倒影'
+            },
+            {
+                id: 'kwun-tong',
+                name: 'Kwun Tong',
+                nameZh: '觀塘區',
+                region: 'kowloon',
+                regionName: 'Kowloon',
+                regionNameZh: '九龍',
+                coords: [22.3133, 114.2258],
+                landmark: 'Kwun Tong Promenade & Lei Yue Mun',
+                landmarkZh: '觀塘海濱長廊與鯉魚門',
+                img: 'https://images.unsplash.com/photo-1498036882173-b41c28a8a434?auto=format&fit=crop&w=800&q=80',
+                history: 'Kwun Tong transformed from a major industrial powerhouse of the 1960s into a modern East Kowloon commercial district with waterfront parks.',
+                historyZh: '觀塘從1960年代香港重要的輕工業製造重鎮，成功轉型為九龍東核心商業區與海濱藝術公園。',
+                architecture: 'Industrial revitalised design featuring crane-shaped art installations, illuminated boardwalk structures, and old paper factory conversions.',
+                architectureZh: '海濱公園融合起重機概念金屬藝術裝置與夜間燈光設計，展現舊工業區活化後的現代藝術美感。',
+                questTip: 'Use long-exposure evening shots to capture the artistic illuminated glass tower on the waterfront promenade.',
+                questTipZh: '傍晚時分使用慢快門拍攝海濱塔樓的幾何發光結構與海面波光，表現工業轉型的現代感。',
+                assignmentTitle: 'Industrial Heritage Transformation',
+                assignmentTitleZh: '工業遺產活化與海濱燈光視覺'
+            },
+
+            // NEW TERRITORIES (8 Districts)
+            {
+                id: 'kwai-tsing',
+                name: 'Kwai Tsing',
+                nameZh: '葵青區',
+                region: 'new-territories',
+                regionName: 'New Territories',
+                regionNameZh: '新界',
+                coords: [22.3549, 114.1261],
+                landmark: 'Tsing Ma Bridge & Kwai Chung Container Port',
+                landmarkZh: '青馬大橋與葵涌貨櫃碼頭',
+                img: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=800&q=80',
+                history: 'Tsing Ma Bridge opened in 1997 as one of the world’s longest suspension bridges, connecting Hong Kong International Airport to the urban center.',
+                historyZh: '青馬大橋於1997年通車，為全球最長的鐵路公路兩用懸索大橋之一，亦是連接赤鱲角機場的核心基建。',
+                architecture: 'Modern mega-suspension engineering featuring massive steel towers, aerodynamic double-deck truss girders, and cable stays.',
+                architectureZh: '宏偉的現代懸索橋樑工程，由巨大鋼塔、雙層流線型鋼桁樑及高拉力鋼纜構成強烈幾何線條。',
+                questTip: 'Photograph the sweeping cables of Tsing Ma Bridge at golden hour from the Tsing Yi Lookout to emphasize scale and structural lines.',
+                questTipZh: '黃昏日落時分在青衣寮肚山或觀景台遠眺，以夕陽餘暉為背景拍攝青馬大橋主纜的幾何弧線。',
+                assignmentTitle: 'Engineering Marvels & Suspension Lines',
+                assignmentTitleZh: '基建工程奇蹟與大橋鋼纜線條'
+            },
+            {
+                id: 'tsuen-wan',
+                name: 'Tsuen Wan',
+                nameZh: '荃灣區',
+                region: 'new-territories',
+                regionName: 'New Territories',
+                regionNameZh: '新界',
+                coords: [22.3713, 114.1142],
+                landmark: 'Sam Tung Uk Hakka Village & Tai Mo Shan',
+                landmarkZh: '三棟屋客家圍村與大帽山',
+                img: 'https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=800&q=80',
+                history: 'Sam Tung Uk is a 200-year-old walled Hakka village built by the Chan clan in 1786, now preserved as an open-air museum.',
+                historyZh: '三棟屋是由陳氏宗族於1786年建立的客家圍村，擁有逾200年歷史，現已修復為博物館開放參觀。',
+                architecture: 'Traditional symmetrical Hakka walled layout consisting of three rows of houses enclosed by protective granite-founded walls.',
+                architectureZh: '棋盤狀嚴謹對稱的客家圍屋佈局，由三進堂廳及外圍保護性圍牆組成，展現傳統防衛型村落特色。',
+                questTip: 'Capture the repetitive black tiled roofs and carved wooden doorways to showcase traditional Hakka village layout.',
+                questTipZh: '拍攝重疊排列的小青瓦屋頂與傳統祠堂木雕門樓，呈現客家建築對稱而層次豐富的質感。',
+                assignmentTitle: 'Hakka Ancestral Heritage',
+                assignmentTitleZh: '客家圍村建築與三棟屋歷史'
+            },
+            {
+                id: 'tuen-mun',
+                name: 'Tuen Mun',
+                nameZh: '屯門區',
+                region: 'new-territories',
+                regionName: 'New Territories',
+                regionNameZh: '新界',
+                coords: [22.3916, 113.9772],
+                landmark: 'Castle Peak Monastery & Gold Coast',
+                landmarkZh: '青山禪院與黃金海岸',
+                img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
+                history: 'Castle Peak Monastery is one of Hong Kong’s oldest sacred sites, established by Buddhist monk Master Pui To in the 5th century AD.',
+                historyZh: '青山禪院為香港最古老的佛教聖地之一，相傳由南北朝杯渡禪師於5世紀創立，史蹟悠久。',
+                architecture: 'Classical hillside monastic complex with ornate archways, stone tablet inscriptions, and tranquil mountain paths.',
+                architectureZh: '依山而建的古典古剎建築群，擁有一級歷史牌樓「香海名山」、山門石刻及古樸清幽的石階。',
+                questTip: 'Photograph the ancient entrance archway framed by dense green foliage on Castle Peak.',
+                questTipZh: '以青山密林為背景拍攝「香海名山」古牌坊，運用樹葉形成的自然框景增添古意。',
+                assignmentTitle: 'Sacred Mountain Serenity',
+                assignmentTitleZh: '千年古剎石牌樓與青山靜謐'
+            },
+            {
+                id: 'yuen-long',
+                name: 'Yuen Long',
+                nameZh: '元朗區',
+                region: 'new-territories',
+                regionName: 'New Territories',
+                regionNameZh: '新界',
+                coords: [22.4445, 114.0222],
+                landmark: 'Hong Kong Wetland Park & Ping Shan Heritage Trail',
+                landmarkZh: '香港濕地公園與屏山文物徑',
+                img: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80',
+                history: 'Home to the Tang Clan, Ping Shan Trail showcases Hong Kong’s oldest pagoda (Tsui Sing Lau Pagoda, built over 600 years ago).',
+                historyZh: '屏山文物徑展示鄧氏大族逾600年的歷史文化，包含香港現存唯一的古塔「聚星樓」及鄧氏宗祠。',
+                architecture: 'Hexagonal green-tiled pagoda structure in blue brick, paired with ecological wooden boardwalks across conservation wetlands.',
+                architectureZh: '聚星樓採用青磚築砌的三層六角形古塔結構；濕地公園則以木棧道與生態建築相結合。',
+                questTip: 'Capture migratory birds against the reflective water mirrors of the Wetland Park boardwalks.',
+                questTipZh: '在濕地公園木棧道捕捉水鳥飛過鏡面水池的動態，或拍攝古塔在藍天下的線條。',
+                assignmentTitle: 'Eco-Heritage Harmony',
+                assignmentTitleZh: '古塔文物徑與自然濕地生態'
+            },
+            {
+                id: 'north',
+                name: 'North District',
+                nameZh: '北區',
+                region: 'new-territories',
+                regionName: 'New Territories',
+                regionNameZh: '新界',
+                coords: [22.4947, 114.1381],
+                landmark: 'Fanling Wai & Long Valley Nature Park',
+                landmarkZh: '粉嶺圍古村與塱原自然公園',
+                img: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80',
+                history: 'Fanling Wai is a historic walled village established by the Pang clan during the Southern Song Dynasty, featuring defensive watchtowers and cannon mounts.',
+                historyZh: '粉嶺圍是彭氏宗族於宋代建立的歷史圍村，保留了完整的護城河、古炮與防禦碉樓。',
+                architecture: 'Defensive brick enclosures with cannon emplacements and central ancestral halls facing reflecting fish ponds.',
+                architectureZh: '典型圍仔防衛建築，村前設有風水魚塘、古炮台與三座砲樓，充滿古樸鄉村防禦色彩。',
+                questTip: 'Shoot the reflection of ancient watchtowers in the pond early in the morning.',
+                questTipZh: '清晨拍攝風水魚塘，利用平靜如鏡的水面捕捉粉嶺圍古砲台與祠堂倒影。',
+                assignmentTitle: 'Walled Village Reflections',
+                assignmentTitleZh: '古炮圍村風水塘倒影'
+            },
+            {
+                id: 'tai-po',
+                name: 'Tai Po',
+                nameZh: '大埔區',
+                region: 'new-territories',
+                regionName: 'New Territories',
+                regionNameZh: '新界',
+                coords: [22.4508, 114.1642],
+                landmark: 'Hong Kong Railway Museum & Tsz Shan Monastery',
+                landmarkZh: '香港鐵路博物館與慈山寺',
+                img: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=800&q=80',
+                history: 'Located at the old Tai Po Market Railway Station built in 1913, preserving early KCR steam locomotives and heritage tracks.',
+                historyZh: '鐵路博物館位於1913年興建的舊大埔墟火車站原址，珍藏了九廣鐵路早期蒸汽火車頭與歷史車卡。',
+                architecture: 'Indigenous Chinese pitch-roofed station building with traditional ridge ornaments, combined with historic diesel train cars.',
+                architectureZh: '金字頂中國傳統民居式金字屋頂金山建築，配以木製金字樑柱與復古鐵路軌道。',
+                questTip: 'Frame historic train carriages along the tree-lined tracks using natural framing.',
+                questTipZh: '利用鐵道兩旁樹蔭形成的自然框架，拍攝窄軌蒸氣火車頭與復古車廂。',
+                assignmentTitle: 'Tracks Through Time',
+                assignmentTitleZh: '舊大埔墟車站與鐵路歷史軌跡'
+            },
+            {
+                id: 'sha-tin',
+                name: 'Sha Tin',
+                nameZh: '沙田區',
+                region: 'new-territories',
+                regionName: 'New Territories',
+                regionNameZh: '新界',
+                coords: [22.3814, 114.1884],
+                landmark: 'Che Kung Temple & HK Heritage Museum',
+                landmarkZh: '沙田車公廟與香港文化博物館',
+                img: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=800&q=80',
+                history: 'Che Kung Temple honors a Song dynasty general who saved the region from plague. Expanded in 1993 to accommodate thousands of festive worshippers.',
+                historyZh: '車公廟始建於明代末年，紀念宋代救災平亂的車公大元帥，1993年建新廟以容納節慶香客。',
+                architecture: 'Grand Chinese temple complex featuring giant bronze fan wheels, red pillars, and intricate relief carvings.',
+                architectureZh: '宏偉的中國傳統廟宇建築，擁有雄偉的紅柱朱門、飛簷雕刻及殿內巨大的銅製轉運風車。',
+                questTip: 'Capture motion blur of spinning fortune bronze wheels against the vibrant red temple walls.',
+                questTipZh: '使用適度快門捕捉香客轉動銅風車時的動態虛化，配合朱紅廟牆形成強烈民俗氛圍。',
+                assignmentTitle: 'Culture in Motion',
+                assignmentTitleZh: '轉運風車與民俗廟宇文化'
+            },
+            {
+                id: 'sai-kung',
+                name: 'Sai Kung',
+                nameZh: '西貢區',
+                region: 'new-territories',
+                regionName: 'New Territories',
+                regionNameZh: '新界',
+                coords: [22.3833, 114.2708],
+                landmark: 'HK UNESCO Global Geopark & Sharp Island',
+                landmarkZh: '香港聯合國教科文組織世界地質公園與橋咀洲',
+                img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
+                history: 'Formed by massive volcanic eruptions 140 million years ago, creating world-renowned hexagonal basalt rock columns.',
+                historyZh: '西貢火山岩柱由1.4億年前白堊紀的火山大爆發冷卻而成，名列世界地質遺產。',
+                architecture: 'Natural geological formations: towering 30-meter high hexagonal volcanic rock columns and natural sea arches.',
+                architectureZh: '大自然的鬼斧神工——高達30米的巨大六角形火山岩柱陣與海蝕拱門地形。',
+                questTip: 'Photograph the strict vertical lines of hexagonal rock columns against the turquoise ocean waves.',
+                questTipZh: '拍攝六角形岩柱齊整的垂直幾何線條，與蔚藍的碧海浪花形成天然色彩美感。',
+                assignmentTitle: 'Geological Masterpieces of Nature',
+                assignmentTitleZh: '世界級六角火山岩柱與大自然奇觀'
+            },
+
+            // ISLANDS (1 District)
+            {
+                id: 'islands',
+                name: 'Islands District',
+                nameZh: '離島區',
+                region: 'islands',
+                regionName: 'Islands',
+                regionNameZh: '離島',
+                coords: [22.2578, 113.9042],
+                landmark: 'Big Buddha (Lantau) & Tai O Stilt Houses',
+                landmarkZh: '大嶼山天壇大佛與大澳棚屋',
+                img: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=800&q=80',
+                history: 'Tai O is one of Hong Kong’s oldest fishing villages, home to Tanka fishing families who built house networks over tidal waterways for generations.',
+                historyZh: '大澳是香港最古老的漁村之一，蜑家漁民世代於水道之上構建水上棚屋，號稱「香港威尼斯」。',
+                architecture: 'Wooden Pang Uk (stilt houses) connected by narrow footbridges, built over water channels using mangrove-resistant timber.',
+                architectureZh: '水上木製「棚屋」結構，以木柱扎根於水床，戶戶由狹窄木橋與水道相連，饒富漁村特色。',
+                questTip: 'Capture the reflection of rustic wooden stilt houses in the tidal creek during calm waters.',
+                questTipZh: '趁水面平靜無波時，拍攝河道兩旁古樸木棚屋在水中的倒影，展現水鄉風情。',
+                assignmentTitle: 'Venice of Hong Kong - Waterway Homes',
+                assignmentTitleZh: '水鄉大澳棚屋與水上社區生活'
+            }
+        ];
+
+        // Initialize Map & Page Content
+        window.onload = function() {
+            initLeafletMap();
+            updateLanguageUI();
+            renderDistrictCards(hkDistricts);
+            renderAssignments(hkDistricts);
+            renderStudentGallery();
+            renderPassportStamps();
+            populateDistrictSelectOptions();
+        };
+
+        // Filter Map and Grid by Selected Region
+        function filterMapRegion(region) {
+            // Update active button styling
+            const filterBtns = document.querySelectorAll('.region-btn');
+            filterBtns.forEach(btn => {
+                btn.classList.remove('bg-slate-900', 'text-white');
+                btn.classList.add('bg-slate-100', 'text-slate-700');
+            });
+            
+            if (window.event && window.event.currentTarget) {
+                window.event.currentTarget.classList.remove('bg-slate-100', 'text-slate-700');
+                window.event.currentTarget.classList.add('bg-slate-900', 'text-white');
+            }
+
+            const filtered = region === 'all' ? hkDistricts : hkDistricts.filter(d => d.region === region);
+            renderDistrictCards(filtered);
+
+            // Filter map markers visibility
+            mapMarkers.forEach(item => {
+                if (region === 'all' || item.region === region) {
+                    item.marker.addTo(map);
+                } else {
+                    map.removeLayer(item.marker);
+                }
+            });
+
+            if (region !== 'all' && filtered.length > 0) {
+                const bounds = L.latLngBounds(filtered.map(d => d.coords));
+                map.fitBounds(bounds, { padding: [50, 50] });
+            } else {
+                map.setView([22.35, 114.15], 11);
+            }
+        }
+
+        // Language Switcher Function
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'zh' : 'en';
+            updateLanguageUI();
+            renderDistrictCards(hkDistricts);
+            renderAssignments(hkDistricts);
+            renderStudentGallery();
+            renderPassportStamps();
+            populateDistrictSelectOptions();
+
+            if (currentSelectedDistrict) {
+                selectDistrict(currentSelectedDistrict.id);
+            }
+
+            showToast(currentLang === 'zh' ? '已切換至 繁體中文 介面' : 'Switched to English interface');
+        }
+
+        // Update all static i18n text & form placeholders in HTML
+        function updateLanguageUI() {
+            const t = i18n[currentLang];
+            document.getElementById('lang-toggle-label').innerText = t.langButtonLabel;
+
+            // Map each element with data-i18n attribute
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (t[key]) {
+                    el.innerHTML = t[key];
+                }
+            });
+
+            // Update search placeholder & form input placeholders
+            const searchInput = document.getElementById('district-search');
+            if (searchInput) searchInput.placeholder = t.searchPlaceholder;
+
+            const authorInput = document.getElementById('upload-author');
+            if (authorInput) authorInput.placeholder = t.inputNamePlaceholder;
+
+            const landmarkInput = document.getElementById('upload-landmark');
+            if (landmarkInput) landmarkInput.placeholder = t.inputLandmarkPlaceholder;
+
+            const descInput = document.getElementById('upload-desc');
+            if (descInput) descInput.placeholder = t.inputDescPlaceholder;
+
+            const urlInput = document.getElementById('upload-url');
+            if (urlInput) urlInput.placeholder = t.inputUrlPlaceholder;
+        }
+
+        // Initialize Leaflet Map
+        function initLeafletMap() {
+            map = L.map('leaflet-map', {
+                scrollWheelZoom: false
+            }).setView([22.35, 114.15], 11);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            hkDistricts.forEach(district => {
+                const markerHtml = `
+                    <div onclick="selectDistrict('${district.id}')" class="w-8 h-8 rounded-full bg-hkred border-2 border-white shadow-lg flex items-center justify-center text-white text-xs font-bold cursor-pointer hover:scale-125 transition-transform">
+                        <i class="fa-solid fa-camera"></i>
+                    </div>
+                `;
+
+                const customIcon = L.divIcon({
+                    html: markerHtml,
+                    className: 'custom-map-icon',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16]
+                });
+
+                const marker = L.marker(district.coords, { icon: customIcon }).addTo(map);
+                district.leafletMarker = marker;
+                mapMarkers.push({ id: district.id, region: district.region, marker: marker });
+            });
+        }
+
+        // Render District Grid Cards
+        function renderDistrictCards(districts) {
+            const container = document.getElementById('grid-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            districts.forEach(d => {
+                const isStamped = collectedStamps.includes(d.id);
+                const title = currentLang === 'zh' ? `${d.nameZh} (${d.name})` : d.name;
+                const region = currentLang === 'zh' ? d.regionNameZh : d.regionName;
+                const landmark = currentLang === 'zh' ? d.landmarkZh : d.landmark;
+                const history = currentLang === 'zh' ? d.historyZh : d.history;
+
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col";
+                card.innerHTML = `
+                    <div class="relative h-48 overflow-hidden bg-slate-100">
+                        <img src="${d.img}" alt="${d.name}" class="w-full h-full object-cover transition-transform duration-500 hover:scale-110">
+                        <div class="absolute top-3 right-3 bg-slate-900/70 backdrop-blur-md text-white text-xs px-2.5 py-1 rounded-full font-semibold">
+                            ${region}
+                        </div>
+                        ${isStamped ? '<div class="absolute top-3 left-3 bg-hkgold text-white text-xs px-2.5 py-1 rounded-full font-bold shadow-md"><i class="fa-solid fa-check mr-1"></i> Stamped</div>' : ''}
+                    </div>
+                    <div class="p-5 flex-1 flex flex-col justify-between space-y-3">
+                        <div>
+                            <div class="flex items-center justify-between text-xs text-slate-500 font-bold mb-1">
+                                <span>${d.nameZh}</span>
+                                <span class="text-hkred"><i class="fa-solid fa-location-dot"></i> ${landmark.split('&')[0]}</span>
+                            </div>
+                            <h3 class="text-lg font-bold text-slate-900 leading-snug">${title}</h3>
+                            <p class="text-xs text-slate-600 line-clamp-2 mt-1.5 leading-relaxed">${history}</p>
+                        </div>
+                        <button onclick="selectDistrict('${d.id}')" class="w-full bg-slate-100 hover:bg-hkred hover:text-white text-slate-800 font-bold text-xs py-2.5 rounded-xl transition-colors flex items-center justify-center gap-1.5">
+                            <span>${currentLang === 'zh' ? '查看景點導賞與任務' : 'View Landmark & Photo Quest'}</span>
+                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Render Photo Assignments
+        function renderAssignments(districts) {
+            const container = document.getElementById('assignments-grid');
+            if (!container) return;
+            container.innerHTML = '';
+
+            districts.slice(0, 6).forEach((d, idx) => {
+                const title = currentLang === 'zh' ? d.assignmentTitleZh : d.assignmentTitle;
+                const tip = currentLang === 'zh' ? d.questTipTipZh || d.questTipZh : d.questTip;
+                const landmark = currentLang === 'zh' ? d.landmarkZh : d.landmark;
+
+                const card = document.createElement('div');
+                card.className = "bg-slate-50 rounded-2xl p-6 border border-slate-200 flex flex-col justify-between hover:border-hkred/30 transition-all";
+                card.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wider text-hkred bg-rose-100 px-2.5 py-1 rounded-md">Quest #${idx + 1}</span>
+                            <span class="text-xs text-slate-500 font-semibold">${currentLang === 'zh' ? d.nameZh : d.name}</span>
+                        </div>
+                        <h4 class="font-bold text-slate-900 text-base">${title}</h4>
+                        <p class="text-xs text-slate-600 leading-relaxed">${tip}</p>
+                    </div>
+                    <div class="pt-4 mt-4 border-t border-slate-200/80 flex items-center justify-between">
+                        <span class="text-xs text-slate-400 font-medium"><i class="fa-solid fa-camera mr-1"></i> Target: ${landmark.split('&')[0]}</span>
+                        <button onclick="selectDistrict('${d.id}')" class="text-xs font-bold text-hkblue hover:underline">${currentLang === 'zh' ? '開始挑戰' : 'Start Quest'}</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Select and Open District Detail Modal
+        function selectDistrict(districtId) {
+            const district = hkDistricts.find(d => d.id === districtId);
+            if (!district) return;
+
+            currentSelectedDistrict = district;
+
+            document.getElementById('modal-img').src = district.img;
+            document.getElementById('modal-region-badge').innerText = currentLang === 'zh' ? district.regionNameZh : district.regionName;
+            document.getElementById('modal-title').innerText = currentLang === 'zh' ? `${district.nameZh} (${district.name})` : `${district.name} (${district.nameZh})`;
+            document.getElementById('modal-landmark-name').innerHTML = `<i class="fa-solid fa-location-dot"></i> ${currentLang === 'zh' ? district.landmarkZh : district.landmark}`;
+            document.getElementById('modal-history').innerText = currentLang === 'zh' ? district.historyZh : district.history;
+            document.getElementById('modal-architecture').innerText = currentLang === 'zh' ? district.architectureZh : district.architecture;
+            document.getElementById('modal-quest-tip').innerText = currentLang === 'zh' ? (district.questTipTipZh || district.questTipZh) : district.questTip;
+
+            // Update Claim Stamp button state
+            const stampBtn = document.getElementById('claim-stamp-btn');
+            if (collectedStamps.includes(district.id)) {
+                stampBtn.innerHTML = `<i class="fa-solid fa-check"></i> ${i18n[currentLang].modalClaimedBtn}`;
+                stampBtn.classList.remove('bg-hkgold', 'hover:bg-amber-600');
+                stampBtn.classList.add('bg-emerald-600', 'cursor-default');
+            } else {
+                stampBtn.innerHTML = `<i class="fa-solid fa-stamp"></i> ${i18n[currentLang].modalClaimBtn}`;
+                stampBtn.classList.remove('bg-emerald-600', 'cursor-default');
+                stampBtn.classList.add('bg-hkgold', 'hover:bg-amber-600');
+            }
+
+            document.getElementById('landmark-modal').classList.remove('hidden');
+
+            if (map && district.coords) {
+                map.panTo(district.coords);
+            }
+        }
+
+        // Claim Passport Stamp Logic
+        function claimPassportStamp() {
+            if (!currentSelectedDistrict) return;
+            if (!collectedStamps.includes(currentSelectedDistrict.id)) {
+                collectedStamps.push(currentSelectedDistrict.id);
+                localStorage.setItem('hk_explorer_stamps', JSON.stringify(collectedStamps));
+                
+                const dName = currentLang === 'zh' ? currentSelectedDistrict.nameZh : currentSelectedDistrict.name;
+                showToast(`🎉 ${currentLang === 'zh' ? '成功收集' : 'Claimed'} ${dName} ${currentLang === 'zh' ? '分區印章！' : 'Stamp!'}`);
+                renderPassportStamps();
+
+                const stampBtn = document.getElementById('claim-stamp-btn');
+                stampBtn.innerHTML = `<i class="fa-solid fa-check"></i> ${i18n[currentLang].modalClaimedBtn}`;
+                stampBtn.classList.remove('bg-hkgold', 'hover:bg-amber-600');
+                stampBtn.classList.add('bg-emerald-600', 'cursor-default');
+
+                renderDistrictCards(hkDistricts);
+            } else {
+                showToast(currentLang === 'zh' ? '你已收集過此分區的印章！' : 'Already collected this district stamp!');
+            }
+        }
+
+        // Render Student Passport Grid & Counter
+        function renderPassportStamps() {
+            const countBadge = document.getElementById('stamps-count-badge');
+            if (countBadge) countBadge.innerText = `${collectedStamps.length}/18`;
+
+            const progressText = document.getElementById('passport-progress-text');
+            if (progressText) progressText.innerText = `${collectedStamps.length} / 18 ${currentLang === 'zh' ? '已收集' : 'Collected'}`;
+
+            const progressBar = document.getElementById('passport-progress-bar');
+            if (progressBar) progressBar.style.width = `${(collectedStamps.length / 18) * 100}%`;
+
+            const container = document.getElementById('passport-stamps-grid');
+            if (!container) return;
+            container.innerHTML = '';
+
+            hkDistricts.forEach(d => {
+                const isCollected = collectedStamps.includes(d.id);
+                const stampItem = document.createElement('div');
+                stampItem.className = `p-3 rounded-2xl border flex flex-col items-center justify-center text-center transition-all ${
+                    isCollected 
+                    ? 'bg-amber-50 border-amber-300 text-amber-900 shadow-sm' 
+                    : 'bg-slate-100 border-slate-200 text-slate-400 opacity-60'
+                }`;
+
+                stampItem.innerHTML = `
+                    <div class="w-10 h-10 rounded-full border-2 ${isCollected ? 'border-hkgold bg-white text-hkgold' : 'border-slate-300 bg-slate-200 text-slate-400'} flex items-center justify-center mb-1 text-sm font-bold">
+                        ${isCollected ? '<i class="fa-solid fa-stamp"></i>' : '<i class="fa-solid fa-lock"></i>'}
+                    </div>
+                    <span class="text-[10px] font-bold truncate max-w-full">${currentLang === 'zh' ? d.nameZh : d.name}</span>
+                `;
+                container.appendChild(stampItem);
+            });
+        }
+
+        // Populate Select Dropdown in Form
+        function populateDistrictSelectOptions() {
+            const select = document.getElementById('upload-district');
+            if (!select) return;
+            select.innerHTML = '';
+            hkDistricts.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.id;
+                opt.innerText = `${d.nameZh} (${d.name})`;
+                select.appendChild(opt);
+            });
+        }
+
+        // Search Filter for Grid
+        function searchDistricts() {
+            const query = document.getElementById('district-search').value.toLowerCase();
+            const filtered = hkDistricts.filter(d => 
+                d.name.toLowerCase().includes(query) || 
+                d.nameZh.includes(query) || 
+                d.landmark.toLowerCase().includes(query) ||
+                d.landmarkZh.includes(query) ||
+                d.history.toLowerCase().includes(query) ||
+                d.historyZh.includes(query)
+            );
+            renderDistrictCards(filtered);
+        }
+
+        // Render Student Showcase Gallery
+        function renderStudentGallery() {
+            const container = document.getElementById('student-gallery-grid');
+            if (!container) return;
+            container.innerHTML = '';
+
+            studentSubmissions.forEach(sub => {
+                const district = hkDistricts.find(d => d.id === sub.districtId);
+                const districtName = district ? (currentLang === 'zh' ? district.nameZh : district.name) : 'Hong Kong';
+                const authorName = currentLang === 'zh' ? (sub.authorZh || sub.author) : sub.author;
+                const landmarkTitle = currentLang === 'zh' ? (sub.landmarkZh || sub.landmark) : sub.landmark;
+                const descText = currentLang === 'zh' ? (sub.descZh || sub.desc) : sub.desc;
+
+                const card = document.createElement('div');
+                card.className = "bg-slate-800 rounded-2xl overflow-hidden border border-slate-700 flex flex-col justify-between hover:border-amber-400/50 transition-all";
+                card.innerHTML = `
+                    <div>
+                        <div class="relative h-48">
+                            <img src="${sub.img}" alt="${landmarkTitle}" class="w-full h-full object-cover">
+                            <span class="absolute bottom-2 left-2 bg-slate-900/80 text-amber-300 text-[11px] font-bold px-2.5 py-1 rounded-md">
+                                <i class="fa-solid fa-location-dot mr-1"></i> ${districtName}
+                            </span>
+                        </div>
+                        <div class="p-4 space-y-2">
+                            <h4 class="font-bold text-white text-sm">${landmarkTitle}</h4>
+                            <p class="text-slate-300 text-xs line-clamp-2">${descText}</p>
+                        </div>
+                    </div>
+                    <div class="p-4 pt-0 flex items-center justify-between text-xs text-slate-400 border-t border-slate-700/50 mt-2">
+                        <span class="truncate max-w-[140px] font-medium text-slate-300">${authorName}</span>
+                        <button onclick="likeSubmission(${sub.id})" class="flex items-center space-x-1 text-rose-400 hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-heart"></i>
+                            <span class="font-bold">${sub.likes}</span>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Like Photo Submission
+        function likeSubmission(id) {
+            const sub = studentSubmissions.find(s => s.id === id);
+            if (sub) {
+                sub.likes++;
+                renderStudentGallery();
+                const authorName = currentLang === 'zh' ? (sub.authorZh || sub.author) : sub.author;
+                showToast(currentLang === 'zh' ? `讚好 ${authorName} 的相片！` : `Liked photo by ${authorName}!`);
+            }
+        }
+
+        function openUploadModalForCurrent() {
+            closeModal('landmark-modal');
+            if (currentSelectedDistrict) {
+                document.getElementById('upload-district').value = currentSelectedDistrict.id;
+                document.getElementById('upload-landmark').value = (currentLang === 'zh' ? currentSelectedDistrict.landmarkZh : currentSelectedDistrict.landmark).split('&')[0];
+            }
+            openUploadModal();
+        }
+
+        function openUploadModal() {
+            document.getElementById('upload-modal').classList.remove('hidden');
+        }
+
+        function openPassportModal() {
+            renderPassportStamps();
+            document.getElementById('passport-modal').classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        // Handle Photo Upload Form
+        function handlePhotoUpload(e) {
+            e.preventDefault();
+            const author = document.getElementById('upload-author').value;
+            const districtId = document.getElementById('upload-district').value;
+            const landmark = document.getElementById('upload-landmark').value;
+            const desc = document.getElementById('upload-desc').value;
+            let img = document.getElementById('upload-url').value;
+
+            if (!img) {
+                const district = hkDistricts.find(d => d.id === districtId);
+                img = district ? district.img : 'https://images.unsplash.com/photo-1506970845246-18f21d533b20?auto=format&fit=crop&w=800&q=80';
+            }
+
+            const newSubmission = {
+                id: Date.now(),
+                author,
+                districtId,
+                landmark,
+                desc,
+                img,
+                likes: 1
+            };
+
+            studentSubmissions.unshift(newSubmission);
+            renderStudentGallery();
+            closeModal('upload-modal');
+            document.getElementById('upload-form').reset();
+            showToast(currentLang === 'zh' ? '🎉 成功提交作品至學生畫廊！' : '🎉 Photo submitted successfully to Student Gallery!');
+            scrollToSection('gallery-section');
+        }
+
+        // Smooth Scroll Helper
+        function scrollToSection(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Custom Toast Notification System
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = "bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 text-sm font-semibold flex items-center gap-3 animate-in fade-in slide-in-from-bottom duration-300 pointer-events-auto";
+            toast.innerHTML = `
+                <i class="fa-solid fa-circle-check text-hkgold text-lg"></i>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'transition-opacity', 'duration-300');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
